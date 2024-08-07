@@ -1,16 +1,21 @@
-use std::io::Result;
-use std::os::fd::{FromRawFd, RawFd};
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    io::Result,
+    mem::ManuallyDrop,
+    os::fd::{FromRawFd, IntoRawFd, RawFd},
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use objc_foundation::INSData;
 use objc_id::{Id, Shared};
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use tokio::net::UnixStream;
+use tokio::{
+    io::{AsyncRead, AsyncWrite, ReadBuf},
+    net::UnixStream,
+};
+use tracing::warn;
 
 use super::types::{kCFStreamPropertySocketNativeHandle, CBL2CAPChannel, CFStream};
-use crate::error::ErrorKind;
-use crate::Error;
+use crate::{error::ErrorKind, Error};
 
 // This implementation is based upon the fact that that CBL2CAPChannel::outputStream -> an NS Output Stream; (https://developer.apple.com/documentation/foundation/outputstream)
 // NS Output stream is toll free bridged to CFWriteStream (https://developer.apple.com/documentation/corefoundation/cfwritestream)
@@ -25,7 +30,10 @@ use crate::Error;
 #[derive(Debug)]
 pub struct Channel {
     _channel: Id<CBL2CAPChannel, Shared>,
-    stream: Pin<Box<UnixStream>>,
+
+    /// the _channel object owns the file descriptor, so we have a ManuallyDrop here to prevent the file descriptor from
+    /// being double closed when this object is dropped.
+    stream: ManuallyDrop<Pin<Box<UnixStream>>>,
 }
 
 enum ChannelCreationError {
@@ -71,9 +79,9 @@ impl Channel {
 
         let tokio_stream = UnixStream::try_from(stream).map_err(ChannelCreationError::TokioStreamCreation)?;
 
-        let stream = Box::pin(tokio_stream);
+        let stream = ManuallyDrop::new(Box::pin(tokio_stream));
 
-        Ok(Self {
+        Ok(Channel {
             _channel: channel,
             stream,
         })
@@ -96,6 +104,22 @@ impl AsyncWrite for Channel {
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         self.stream.as_mut().poll_shutdown(cx)
+    }
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
+        // Manually deconstruct the tokio stream to a file descriptor to make sure it is not closed on drop.
+        // The file descriptor is closed when _channel is dropped.
+
+        // Safe as this is the drop impl, so the stream will not be used after this.
+        let stream = unsafe { ManuallyDrop::take(&mut self.stream) };
+        let stream = Pin::into_inner(stream);
+        let Ok(stream) = stream.into_std() else {
+            warn!("Could not convert tokio stream to standard stream");
+            return;
+        };
+        let _stream = stream.into_raw_fd();
     }
 }
 
