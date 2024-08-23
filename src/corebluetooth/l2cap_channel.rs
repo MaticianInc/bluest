@@ -41,8 +41,7 @@ enum ChannelCreationError {
     InputFileDescriptorBytesWrongSize,
     OutputFileDescriptorBytesWrongSize,
     FileDescriptorsNotIdentical,
-    SetNonBlockingModeFailed(std::io::Error),
-    TokioStreamCreation(std::io::Error),
+    IOError(std::io::Error),
 }
 
 impl Channel {
@@ -71,13 +70,33 @@ impl Channel {
         if in_fd != out_fd {
             return Err(ChannelCreationError::FileDescriptorsNotIdentical.into());
         };
+        let fd: RawFd = in_fd;
 
-        let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(in_fd) };
-        stream
-            .set_nonblocking(true)
-            .map_err(ChannelCreationError::SetNonBlockingModeFailed)?;
+        {
+            // By default on ios sockets throw a SIGPIPE signal when they are closed.
+            // See https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/NetworkingOverview/CommonPitfalls/CommonPitfalls.html
+            // Prevent this by doing a setsockopt;
+            let val: libc::c_int = 1;
+            let ret = unsafe {
+                libc::setsockopt(
+                    fd,
+                    libc::SOL_SOCKET,
+                    libc::SO_NOSIGPIPE,
+                    &val as *const _ as *const libc::c_void,
+                    std::mem::size_of_val(&val) as libc::socklen_t,
+                )
+            };
 
-        let tokio_stream = UnixStream::try_from(stream).map_err(ChannelCreationError::TokioStreamCreation)?;
+            if ret != 0 {
+                Err(ChannelCreationError::IOError(std::io::Error::last_os_error()))?;
+            }
+        }
+
+        let stream = unsafe { std::os::unix::net::UnixStream::from_raw_fd(fd) };
+
+        stream.set_nonblocking(true).map_err(ChannelCreationError::IOError)?;
+
+        let tokio_stream = UnixStream::try_from(stream).map_err(ChannelCreationError::IOError)?;
 
         let stream = ManuallyDrop::new(Box::pin(tokio_stream));
 
@@ -134,8 +153,7 @@ impl From<ChannelCreationError> for Error {
                 "Output file descriptor bytes are an invalid size."
             }
             ChannelCreationError::FileDescriptorsNotIdentical => "Input and output file descriptors are not identical.",
-            ChannelCreationError::SetNonBlockingModeFailed(_) => "Could not get convert socket to async.",
-            ChannelCreationError::TokioStreamCreation(_) => "Failed to create tokio unix socket.",
+            ChannelCreationError::IOError(_) => "IO Error while making stream",
         };
 
         Error::new(
@@ -145,8 +163,7 @@ impl From<ChannelCreationError> for Error {
                 | ChannelCreationError::InputFileDescriptorBytesWrongSize
                 | ChannelCreationError::OutputFileDescriptorBytesWrongSize
                 | ChannelCreationError::FileDescriptorsNotIdentical => None,
-                ChannelCreationError::SetNonBlockingModeFailed(src)
-                | ChannelCreationError::TokioStreamCreation(src) => Some(Box::new(src)),
+                ChannelCreationError::IOError(src) => Some(Box::new(src)),
             },
             message.to_owned(),
         )
