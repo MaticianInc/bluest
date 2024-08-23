@@ -21,7 +21,7 @@ targets = [
 
 [features]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
-l2cap = ["dep:tokio", "bluer/l2cap"]
+l2cap = ["dep:tokio", "bluer/l2cap", "dep:libc"]
 
 [dependencies]
 async-trait = "0.1.57"
@@ -67,6 +67,7 @@ tokio = { version = "1.20.1", features = ["rt", "io-util"], optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.5.1"
+libc = { version = "0.2", optional = true }
 objc = "0.2.7"
 objc_id = "0.1.1"
 objc-foundation = "0.1.1"
