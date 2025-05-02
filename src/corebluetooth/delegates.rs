@@ -117,7 +117,7 @@ pub enum PeripheralEvent {
     },
     #[allow(unused)]
     L2CAPChannelOpened {
-        channel: ShareId<CBL2CAPChannel>,
+        channel: Option<ShareId<CBL2CAPChannel>>,
         error: Option<ShareId<NSError>>,
     },
 }
@@ -538,7 +538,7 @@ impl PeripheralDelegate {
     delegate_method!(did_read_rssi<ReadRssi>(peripheral, rssi: i16, error: Option));
     delegate_method!(did_update_name<NameUpdate>(peripheral));
     delegate_method!(did_modify_services<ServicesChanged>(peripheral, invalidated_services: Vec));
-    delegate_method!(did_open_l2cap_channel<L2CAPChannelOpened>(peripheral, channel: Object, error: Option));
+    delegate_method!(did_open_l2cap_channel<L2CAPChannelOpened>(peripheral, channel: Option, error: Option));
 
     fn class() -> &'static Class {
         static DELEGATE_CLASS_INIT: Once = Once::new();

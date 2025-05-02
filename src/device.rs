@@ -6,6 +6,8 @@ use futures_lite::StreamExt;
 use crate::error::ErrorKind;
 #[cfg(feature = "l2cap")]
 use crate::l2cap_channel::L2capChannel;
+#[cfg(all(feature = "l2cap", feature = "tokio"))]
+use crate::l2cap_channel::TokioL2CapChannel;
 use crate::pairing::PairingAgent;
 use crate::{sys, DeviceId, Error, Result, Service, Uuid};
 
@@ -158,14 +160,27 @@ impl Device {
     /// Open an L2CAP connection-oriented channel (CoC) to this device.
     ///
     /// # Platform specific
-    ///
-    /// Returns [`NotSupported`][crate::error::ErrorKind::NotSupported] on iOS/MacOS and Linux.
     /// The `l2cap` feature is not available on Windows.
     #[inline]
     #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<L2capChannel> {
-        let (reader, writer) = self.0.open_l2cap_channel(psm, secure).await?;
-        Ok(L2capChannel { reader, writer })
+        let channel = self.0.open_l2cap_channel(psm, secure).await?;
+        Ok(L2capChannel {
+            inner: Box::pin(channel),
+        })
+    }
+
+    /// Open an L2CAP connection-oriented channel (CoC) to this device.
+    ///
+    /// # Platform specific
+    /// The `l2cap` feature is not available on Windows.
+    #[inline]
+    #[cfg(all(feature = "l2cap", feature = "tokio"))]
+    pub async fn open_tokio_l2cap_channel(&self, psm: u16, secure: bool) -> Result<TokioL2CapChannel> {
+        let channel = self.0.open_tokio_l2cap_channel(psm, secure).await?;
+        Ok(TokioL2CapChannel {
+            inner: Box::pin(channel),
+        })
     }
 }
 

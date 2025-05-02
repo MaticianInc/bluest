@@ -1,5 +1,7 @@
 //! Bluest errors
 
+use std::io::ErrorKind as IOErrorKind;
+
 /// The error type for Bluetooth operations
 #[derive(Debug)]
 pub struct Error {
@@ -112,6 +114,23 @@ impl From<ErrorKind> for Error {
         Error {
             kind,
             source: None,
+            message: String::new(),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self {
+            kind: match value.kind() {
+                IOErrorKind::NotFound => ErrorKind::NotFound,
+                IOErrorKind::TimedOut => ErrorKind::Timeout,
+                IOErrorKind::PermissionDenied => ErrorKind::NotAuthorized,
+                IOErrorKind::ConnectionRefused => ErrorKind::ConnectionFailed,
+                IOErrorKind::NotConnected => ErrorKind::NotConnected,
+                _ => ErrorKind::Other,
+            },
+            source: Some(Box::new(value)),
             message: String::new(),
         }
     }

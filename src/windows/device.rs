@@ -12,6 +12,8 @@ use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEv
 use windows::Foundation::TypedEventHandler;
 
 use super::error::{check_communication_status, check_pairing_status, check_unpairing_status};
+#[cfg(feature = "l2cap")]
+use super::l2cap_channel;
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::{IoCapability, PairingAgent, Passkey};
@@ -269,6 +271,17 @@ impl DeviceImpl {
     ///
     /// Returns [ErrorKind::NotSupported].
     pub async fn rssi(&self) -> Result<i16> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
+    #[cfg(feature = "l2cap")]
+    pub async fn open_l2cap_channel(&self, _psm: u16, _secure: bool) -> Result<l2cap_channel::Channel> {
+        Err(ErrorKind::NotSupported.into())
+    }
+
+    #[inline]
+    #[cfg(all(feature = "l2cap", feature = "tokio"))]
+    pub async fn open_tokio_l2cap_channel(&self, _psm: u16, _secure: bool) -> Result<l2cap_channel::TokioL2CapChannel> {
         Err(ErrorKind::NotSupported.into())
     }
 }

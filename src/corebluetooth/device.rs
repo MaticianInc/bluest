@@ -7,12 +7,17 @@ use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 #[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
+use super::types::CBL2CAPChannel;
 use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
 use crate::pairing::PairingAgent;
 use crate::{Device, DeviceId, Error, Result, Service, Uuid};
+
+#[cfg(feature = "l2cap")]
+use super::l2cap_channel::Channel;
+#[cfg(all(feature = "l2cap", feature = "tokio"))]
+use super::l2cap_channel::TokioL2CapChannel;
 
 /// A Bluetooth LE device
 #[derive(Clone)]
@@ -211,12 +216,57 @@ impl DeviceImpl {
     }
 
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
-        &self,
-        _psm: u16,
-        _secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-        Err(ErrorKind::NotSupported.into())
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<Channel> {
+        use super::l2cap_channel;
+
+        let channel = self.get_raw_channel(psm, secure).await?;
+        let (input_stream, output_stream) = (channel.input_stream(), channel.output_stream());
+        let channel = l2cap_channel::Channel::cf_stream(channel, input_stream, output_stream);
+        Ok(channel)
+    }
+
+    #[cfg(all(feature = "l2cap", feature = "tokio"))]
+    pub async fn open_tokio_l2cap_channel(&self, psm: u16, secure: bool) -> Result<TokioL2CapChannel> {
+        let channel = self.get_raw_channel(psm, secure).await?;
+        let channel = TokioL2CapChannel::new(channel)?;
+        Ok(channel)
+    }
+
+    #[cfg(feature = "l2cap")]
+    async fn get_raw_channel(&self, psm: u16, secure: bool) -> Result<ShareId<CBL2CAPChannel>> {
+        if secure {
+            return Err(Error::new(
+                ErrorKind::NotSupported,
+                None,
+                "Corebluetooth does not support secure sockets".to_owned(),
+            ));
+        }
+        if !self.is_connected().await {
+            return Err(ErrorKind::NotConnected.into());
+        }
+
+        let mut receiver = self.delegate.sender().new_receiver();
+        self.peripheral.open_l2_cap_channel(psm);
+
+        loop {
+            match receiver.recv().await.map_err(Error::from_recv_error)? {
+                PeripheralEvent::L2CAPChannelOpened {
+                    channel: Some(chan),
+                    error: None,
+                } => return Ok(chan),
+                PeripheralEvent::L2CAPChannelOpened {
+                    channel: None,
+                    error: ns_error,
+                } => {
+                    return Err(Error::new(
+                        ErrorKind::ConnectionFailed,
+                        None,
+                        format!("Failed to Open L2Cap Connection with error {:?}", ns_error),
+                    ))
+                }
+                _ => (),
+            }
+        }
     }
 }
 

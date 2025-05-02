@@ -16,3 +16,11 @@ impl std::fmt::Display for DeviceId {
         std::fmt::Display::fmt(&self.0.to_string_lossy(), f)
     }
 }
+
+#[cfg(feature = "l2cap")]
+pub mod l2cap_channel {
+    pub type Channel = ();
+
+    #[cfg(feature = "tokio")]
+    pub type TokioL2CapChannel = ();
+}

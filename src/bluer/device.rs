@@ -3,8 +3,6 @@ use std::sync::Arc;
 use futures_core::Stream;
 use futures_lite::StreamExt;
 
-#[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
 use super::DeviceId;
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
@@ -294,12 +292,25 @@ impl DeviceImpl {
     }
 
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<super::l2cap_channel::Channel> {
+        let address_type = self.inner.address_type().await.map_err(|err| {
+            crate::Error::new(
+                crate::error::ErrorKind::Internal,
+                Some(Box::new(err)),
+                "Could not get address".to_owned(),
+            )
+        })?;
+        let sa = bluer::l2cap::SocketAddr::new(self.inner.address(), address_type, psm);
+        super::l2cap_channel::Channel::new(sa, secure).await
+    }
+
+    #[cfg(all(feature = "l2cap", feature = "tokio"))]
+    pub async fn open_tokio_l2cap_channel(
         &self,
-        _psm: u16,
-        _secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
-        Err(ErrorKind::NotSupported.into())
+        psm: u16,
+        secure: bool,
+    ) -> Result<super::l2cap_channel::TokioL2CapChannel> {
+        self.open_l2cap_channel(psm, secure).await
     }
 }
 
