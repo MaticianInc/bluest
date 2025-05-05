@@ -22,7 +22,12 @@ targets = [
 
 [features]
 unstable = []
-l2cap = ["bluer/l2cap", "dep:futures-io", "dep:core-foundation-sys"]
+l2cap = [
+    "bluer/l2cap",
+    "dep:futures-io",
+    "dep:core-foundation-sys",
+    "objc-foundation/async_stream",
+]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 tokio = ["dep:tokio", "dep:libc"]
 
@@ -42,7 +47,7 @@ tokio = { version = "1.20.1", features = [
     "time",
     "io-util",
 ] }
-futures-util = { version = "0.3.28", features = ["io"]}
+futures-util = { version = "0.3.28", features = ["io"] }
 tracing-subscriber = { version = "0.3.15", features = ["env-filter"] }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
@@ -74,7 +79,7 @@ async-channel = "2.2.0"
 async-broadcast = "0.5.1"
 objc = { version = "0.2.8", package = "objc-rs" }
 objc_id = "0.1.1"
-objc-foundation = "0.1.1"
+objc-foundation = "0.2.0"
 core-foundation-sys = { version = "0.8.7", optional = true }
 libc = { version = "0.2", optional = true }
 
