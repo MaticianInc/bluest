@@ -6,6 +6,9 @@ pub mod descriptor;
 pub mod device;
 pub mod service;
 
+#[cfg(feature = "l2cap")]
+pub mod l2cap_channel;
+
 /// A platform-specific device identifier.
 /// On android it contains the Bluetooth address in the format `AB:CD:EF:01:23:45`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

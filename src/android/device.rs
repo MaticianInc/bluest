@@ -109,7 +109,8 @@ impl DeviceImpl {
 
     #[cfg(feature = "l2cap")]
     pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<crate::L2CapChannel> {
-        Ok(self.device.open_l2cap_channel(psm, secure)?)
+        use super::l2cap_channel::Channel;
+        Ok(Channel::new(self.device.open_l2cap_channel(psm, secure)?))
     }
 }
 

@@ -1,8 +1,4 @@
-use std::io::Result;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-
-use futures_io::{AsyncRead, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::sys;
 

@@ -22,7 +22,7 @@ default-target = "x86_64-apple-darwin"
 
 [features]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
-l2cap = ["dep:tokio", "bluer/l2cap", "dep:libc"]
+l2cap = ["dep:tokio", "bluer/l2cap", "dep:libc", "dep:tokio-util"]
 
 [dependencies]
 async-trait = "0.1.57"
@@ -63,6 +63,8 @@ tokio = { version = "1.20.1", features = ["rt-multi-thread"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 bluedroid.path = "../rust_android_integration/rust/bluedroid"
+tokio = { version = "1.20.1", optional = true }
+tokio-util = {version = "0.7.15" , optional = true, default-features = false, features = ["io", "compat"]}
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 async-broadcast = "0.5.1"
@@ -70,7 +72,7 @@ libc = { version = "0.2", optional = true }
 objc = { version = "0.2.8", package = "objc-rs" }
 objc_id = "0.1.1"
 objc-foundation = "0.1.1"
-tokio = { version = "1.20.1", features = ["net"], optional = true }
+tokio = { version = "1.20.1", features = ["net", "io-util"], optional = true }
 
 [patch.crates-io]
 objc_id = { path = "../rust-objc-id/" }
