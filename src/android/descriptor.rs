@@ -1,26 +1,26 @@
 use crate::{Result, Uuid};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DescriptorImpl {}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DescriptorImpl(pub(super) bluedroid::Descriptor);
 
 impl DescriptorImpl {
     pub fn uuid(&self) -> Uuid {
-        todo!()
+        self.0.uuid().unwrap()
     }
 
     pub async fn uuid_async(&self) -> Result<Uuid> {
-        todo!()
+        Ok(self.0.uuid()?)
     }
 
     pub async fn value(&self) -> Result<Vec<u8>> {
-        todo!()
+        self.read().await
     }
 
     pub async fn read(&self) -> Result<Vec<u8>> {
-        todo!()
+        Ok(self.0.read().await?.into_vec())
     }
 
-    pub async fn write(&self, _value: &[u8]) -> Result<()> {
-        todo!()
+    pub async fn write(&self, value: &[u8]) -> Result<()> {
+        Ok(self.0.write(value).await?)
     }
 }

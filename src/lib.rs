@@ -91,9 +91,9 @@
 //!| [`Characteristic::max_write_len`][Characteristic::max_write_len]         | ✅ | ✅ | ⌛️ |
 //!| [`Descriptor::uuid`][Descriptor::uuid]                                   | ✅ | ✅ | ⌛️ |
 //!
-//! ✅ = supported  
-//! ✨ = managed automatically by the OS, this method is a no-op  
-//! ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally  
+//! ✅ = supported
+//! ✨ = managed automatically by the OS, this method is a no-op
+//! ⌛️ = the underlying API is async so this method uses Tokio's `block_in_place` API internally
 //! ❌ = returns a [`NotSupported`][error::ErrorKind::NotSupported] error
 //!
 //! Also, the errors returned by APIs in a given situation may not be consistent from platform to platform. For example,
@@ -124,14 +124,8 @@ pub mod pairing;
 mod service;
 mod util;
 
-#[cfg(all(target_os = "android", not(feature = "unstable")))]
-compile_error!("Android support is unstable and requires the 'unstable' feature to be enabled");
-
 #[cfg(all(windows, feature = "l2cap"))]
 compile_error!("L2CAP support is not available on Windows");
-
-#[cfg(all(feature = "l2cap", not(feature = "unstable")))]
-compile_error!("L2CAP support is unstable and requires the 'unstable' feature to be enabled");
 
 #[cfg(target_os = "android")]
 mod android;
@@ -153,7 +147,7 @@ pub use descriptor::Descriptor;
 pub use device::{Device, ServicesChanged};
 pub use error::Error;
 #[cfg(feature = "l2cap")]
-pub use l2cap_channel::{L2CapChannel, L2CapReader, L2CapWriter};
+pub use l2cap_channel::{L2CapChannel, L2CapChannelImpl, L2CapReader, L2CapWriter};
 pub use service::Service;
 pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]

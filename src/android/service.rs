@@ -1,56 +1,76 @@
+use bluedroid::service::ServiceType;
+
 use crate::{Characteristic, Result, Service, Uuid};
 
-#[derive(Debug, Clone)]
-pub struct ServiceImpl {}
+use super::characteristic::CharacteristicImpl;
 
-impl PartialEq for ServiceImpl {
-    fn eq(&self, _other: &Self) -> bool {
-        todo!()
-    }
-}
-
-impl Eq for ServiceImpl {}
-
-impl std::hash::Hash for ServiceImpl {
-    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
-        todo!()
-    }
-}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ServiceImpl(pub(super) bluedroid::Service);
 
 impl ServiceImpl {
     pub fn uuid(&self) -> Uuid {
-        todo!()
+        self.0.uuid().unwrap()
     }
 
     pub async fn uuid_async(&self) -> Result<Uuid> {
-        todo!()
+        Ok(self.0.uuid()?)
     }
 
     pub async fn is_primary(&self) -> Result<bool> {
-        todo!()
+        Ok(matches!(self.0.service_type()?, ServiceType::Primary))
     }
 
     pub async fn discover_characteristics(&self) -> Result<Vec<Characteristic>> {
-        todo!()
+        Ok(self
+            .0
+            .characteristics()?
+            .into_iter()
+            .map(|characteristic| Characteristic(CharacteristicImpl(characteristic)))
+            .collect())
     }
 
-    pub async fn discover_characteristics_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Characteristic>> {
-        todo!()
+    pub async fn discover_characteristics_with_uuid(&self, uuid: Uuid) -> Result<Vec<Characteristic>> {
+        Ok(self
+            .0
+            .characteristics()?
+            .into_iter()
+            .filter_map(|characteristic| {
+                characteristic
+                    .uuid()
+                    .is_ok_and(|characteristic_uuid| characteristic_uuid == uuid)
+                    .then_some(Characteristic(CharacteristicImpl(characteristic)))
+            })
+            .collect())
     }
 
     pub async fn characteristics(&self) -> Result<Vec<Characteristic>> {
-        todo!()
+        self.discover_characteristics().await
     }
 
     pub async fn discover_included_services(&self) -> Result<Vec<Service>> {
-        todo!()
+        Ok(self
+            .0
+            .included_services()?
+            .into_iter()
+            .map(|service| Service(Self(service)))
+            .collect())
     }
 
-    pub async fn discover_included_services_with_uuid(&self, _uuid: Uuid) -> Result<Vec<Service>> {
-        todo!()
+    pub async fn discover_included_services_with_uuid(&self, uuid: Uuid) -> Result<Vec<Service>> {
+        Ok(self
+            .0
+            .included_services()?
+            .into_iter()
+            .filter_map(|service| {
+                service
+                    .uuid()
+                    .is_ok_and(|service_uuid| service_uuid == uuid)
+                    .then_some(Service(Self(service)))
+            })
+            .collect())
     }
 
     pub async fn included_services(&self) -> Result<Vec<Service>> {
-        todo!()
+        self.discover_included_services().await
     }
 }

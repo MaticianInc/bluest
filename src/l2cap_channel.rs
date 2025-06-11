@@ -2,23 +2,27 @@
 
 use futures_io::{AsyncRead, AsyncWrite};
 
-use crate::{sys, Result};
+use crate::sys;
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
 pub type L2CapChannel = sys::l2cap_channel::Channel;
 
+/// Trait for functions that all L2Cap Channels have
 pub trait L2CapChannelImpl: AsyncRead + AsyncWrite {
+    /// Split the channel into a reader and write half
     fn split(self) -> (L2CapReader, L2CapWriter);
 }
 
+/// Reader half of Bluetooth LE L2CAP Connection-oriented Channel (CoC)
 pub type L2CapReader = sys::l2cap_channel::Reader;
 
-trait L2CapReaderImpl: AsyncRead {}
+trait _L2CapReaderImpl: AsyncRead {}
 
-impl L2CapReaderImpl for L2CapReader {}
+impl _L2CapReaderImpl for L2CapReader {}
 
+/// Writer half of Bluetooth LE L2CAP Connection-oriented Channel (CoC)
 pub type L2CapWriter = sys::l2cap_channel::Writer;
 
-trait L2CapWriterImpl: AsyncWrite {}
+trait _L2CapWriterImpl: AsyncWrite {}
 
-impl L2CapWriterImpl for L2CapWriter {}
+impl _L2CapWriterImpl for L2CapWriter {}

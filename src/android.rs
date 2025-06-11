@@ -1,6 +1,3 @@
-use java_spaghetti::{CastError, Local};
-
-use self::bindings::java::lang::Throwable;
 use crate::error::ErrorKind;
 
 pub mod adapter;
@@ -9,8 +6,6 @@ pub mod descriptor;
 pub mod device;
 pub mod l2cap_channel;
 pub mod service;
-
-pub(crate) mod bindings;
 
 /// A platform-specific device identifier.
 /// On android it contains the Bluetooth address in the format `AB:CD:EF:01:23:45`.
@@ -24,41 +19,34 @@ impl std::fmt::Display for DeviceId {
     }
 }
 
-impl From<Local<'_, Throwable>> for crate::Error {
-    fn from(e: Local<'_, Throwable>) -> Self {
-        Self::new(ErrorKind::Internal, None, format!("{:?}", e))
+impl From<bluedroid::GattError> for crate::Error {
+    fn from(err: bluedroid::GattError) -> Self {
+        use bluedroid::GattError;
+        let message = err.to_string();
+        crate::Error::new(
+            match &err {
+                GattError::GattReadNotPermitted
+                | GattError::GattWriteNotPermitted
+                | GattError::GattInsufficientAuthentication
+                | GattError::GattInsufficientEncryption
+                | GattError::GattInsufficientAuthorization => ErrorKind::NotAuthorized,
+                GattError::GattRequestNotSupported => ErrorKind::NotSupported,
+                GattError::GattInvalidOffset | GattError::GattInvalidAttributeLength => ErrorKind::InvalidParameter,
+                GattError::GattConnectionCongested | GattError::GattConnectionTimeout => ErrorKind::Timeout,
+                GattError::GattFailure => ErrorKind::Other,
+                GattError::UnknownError(_) | GattError::JavaError(_) | GattError::WritingToCCCDescriptor => {
+                    ErrorKind::Internal
+                }
+            },
+            Some(Box::new(err)),
+            message,
+        )
     }
 }
 
-impl From<CastError> for crate::Error {
-    fn from(e: CastError) -> Self {
-        Self::new(ErrorKind::Internal, None, format!("{:?}", e))
-    }
-}
-
-struct JavaIterator<'env>(Local<'env, bindings::java::util::Iterator>);
-
-impl<'env> Iterator for JavaIterator<'env> {
-    type Item = Local<'env, bindings::java::lang::Object>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.0.hasNext().unwrap() {
-            let obj = self.0.next().unwrap().unwrap();
-            // upgrade lifetime to the original env.
-            let obj = unsafe { Local::from_raw(self.0.env(), obj.into_raw()) };
-            Some(obj)
-        } else {
-            None
-        }
-    }
-}
-
-trait OptionExt<T> {
-    fn non_null(self) -> Result<T, crate::Error>;
-}
-
-impl<T> OptionExt<T> for Option<T> {
-    #[track_caller]
-    fn non_null(self) -> Result<T, crate::Error> {
-        self.ok_or_else(|| crate::Error::new(ErrorKind::Internal, None, "Java call unexpectedly returned null."))
+impl From<bluedroid::JavaError> for crate::Error {
+    fn from(err: bluedroid::JavaError) -> Self {
+        let message = format!("{:?}", err);
+        crate::Error::new(ErrorKind::Internal, None, message)
     }
 }

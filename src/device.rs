@@ -4,9 +4,9 @@ use futures_core::Stream;
 use futures_lite::StreamExt;
 
 use crate::error::ErrorKind;
-#[cfg(feature = "l2cap")]
-use crate::l2cap_channel::L2capChannel;
 use crate::pairing::PairingAgent;
+#[cfg(feature = "l2cap")]
+use crate::L2CapChannel;
 use crate::{sys, DeviceId, Error, Result, Service, Uuid};
 
 /// A Bluetooth LE device
@@ -163,9 +163,8 @@ impl Device {
     /// The `l2cap` feature is not available on Windows.
     #[inline]
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<L2capChannel> {
-        let (reader, writer) = self.0.open_l2cap_channel(psm, secure).await?;
-        Ok(L2capChannel { reader, writer })
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<L2CapChannel> {
+        self.0.open_l2cap_channel(psm, secure).await
     }
 }
 
