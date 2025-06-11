@@ -1,54 +1,62 @@
 #![cfg(feature = "l2cap")]
 
-use std::fmt;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
-use crate::Result;
+use futures_io::{AsyncRead, AsyncWrite};
 
-pub struct L2capChannelReader {
-    _private: (),
-}
+use crate::l2cap_channel::{L2CapChannelImpl, L2CapReader, L2CapWriter};
 
-impl L2capChannelReader {
-    #[inline]
-    pub async fn read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
+pub struct Channel;
 
-    pub fn try_read(&mut self, _buf: &mut [u8]) -> Result<usize> {
-        todo!()
-    }
-
-    pub async fn close(&mut self) -> Result<()> {
+impl AsyncRead for Channel {
+    fn poll_read(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
         todo!()
     }
 }
 
-impl fmt::Debug for L2capChannelReader {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelReader")
-    }
-}
-
-pub struct L2capChannelWriter {
-    _private: (),
-}
-
-impl L2capChannelWriter {
-    pub async fn write(&mut self, _packet: &[u8]) -> Result<()> {
+impl AsyncWrite for Channel {
+    fn poll_write(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &[u8]) -> Poll<std::io::Result<usize>> {
         todo!()
     }
 
-    pub fn try_write(&mut self, _packet: &[u8]) -> Result<()> {
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         todo!()
     }
 
-    pub async fn close(&mut self) -> Result<()> {
+    fn poll_close(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
         todo!()
     }
 }
 
-impl fmt::Debug for L2capChannelWriter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("L2capChannelWriter")
+impl L2CapChannelImpl for Channel {
+    fn split(self) -> (L2CapReader, L2CapWriter) {
+        todo!()
+    }
+}
+
+pub struct Reader;
+
+impl AsyncRead for Reader {
+    fn poll_read(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &mut [u8]) -> Poll<std::io::Result<usize>> {
+        todo!()
+    }
+}
+
+pub struct Writer;
+
+impl AsyncWrite for Writer {
+    fn poll_write(self: Pin<&mut Self>, _cx: &mut Context<'_>, _buf: &[u8]) -> Poll<std::io::Result<usize>> {
+        todo!()
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        todo!()
+    }
+
+    fn poll_close(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        todo!()
     }
 }

@@ -153,7 +153,7 @@ pub use descriptor::Descriptor;
 pub use device::{Device, ServicesChanged};
 pub use error::Error;
 #[cfg(feature = "l2cap")]
-pub use l2cap_channel::{L2capChannel, L2capChannelReader, L2capChannelWriter};
+pub use l2cap_channel::{L2CapChannel, L2CapReader, L2CapWriter};
 pub use service::Service;
 pub use sys::DeviceId;
 #[cfg(not(target_os = "linux"))]

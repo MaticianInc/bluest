@@ -22,15 +22,17 @@ targets = [
 
 [features]
 unstable = []
-l2cap = []
+l2cap = ["dep:futures-io"]
 serde = ["dep:serde", "uuid/serde", "bluer/serde"]
 
 [dependencies]
 async-trait = "0.1.57"
 futures-core = "0.3.28"
 futures-lite = { version = "1.13.0", default-features = false }
-serde = { version = "1.0.143", optional = true, features = ["derive"] }
 tracing = { version = "0.1.36", default-features = false }
+
+serde = { version = "1.0.143", optional = true, features = ["derive"] }
+futures-io = {version = "0.3", optional = true}
 
 [dev-dependencies]
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread", "time"] }

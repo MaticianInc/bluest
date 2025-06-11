@@ -7,7 +7,7 @@ use objc_id::ShareId;
 
 use super::delegates::{PeripheralDelegate, PeripheralEvent};
 #[cfg(feature = "l2cap")]
-use super::l2cap_channel::{L2capChannelReader, L2capChannelWriter};
+use super::l2cap_channel::Channel;
 use super::types::{CBPeripheral, CBPeripheralState, CBService, CBUUID};
 use crate::device::ServicesChanged;
 use crate::error::ErrorKind;
@@ -211,11 +211,7 @@ impl DeviceImpl {
     }
 
     #[cfg(feature = "l2cap")]
-    pub async fn open_l2cap_channel(
-        &self,
-        _psm: u16,
-        _secure: bool,
-    ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
+    pub async fn open_l2cap_channel(&self, _psm: u16, _secure: bool) -> Result<Channel> {
         Err(ErrorKind::NotSupported.into())
     }
 }

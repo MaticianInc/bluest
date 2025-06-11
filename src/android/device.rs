@@ -107,6 +107,11 @@ impl DeviceImpl {
     ) -> std::prelude::v1::Result<(L2capChannelReader, L2capChannelWriter), crate::Error> {
         super::l2cap_channel::open_l2cap_channel(self.device.clone(), psm, secure)
     }
+
+    #[cfg(feature = "l2cap")]
+    pub async fn open_l2cap_channel(&self, psm: u16, secure: bool) -> Result<crate::L2CapChannel> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
