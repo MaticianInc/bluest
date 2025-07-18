@@ -125,7 +125,7 @@ impl AdapterImpl {
                                 .into_iter()
                                 .map(|(key, data)| (key, data.into_vec())),
                         ),
-                        tx_power_level: service.tx_power_level().map(|power_level| i16::from(power_level)),
+                        tx_power_level: service.tx_power_level().map(i16::from),
                         is_connectable: service.is_connectable(),
                     },
                     rssi: Some(i16::from(service.rssi())),

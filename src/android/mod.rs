@@ -65,7 +65,7 @@ impl From<bluedroid::GattError> for crate::Error {
 
 impl From<bluedroid::JavaError> for crate::Error {
     fn from(err: bluedroid::JavaError) -> Self {
-        let message = format!("{:?}", err);
+        let message = format!("{err:?}");
         crate::Error::new(ErrorKind::Internal, None, message)
     }
 }
@@ -82,6 +82,7 @@ impl From<bluedroid::scan::ScanError> for crate::Error {
                 ScanError::ApplicationRegistration | ScanError::InteralError => ErrorKind::Internal,
                 ScanError::OutOfHardwareResources => ErrorKind::NotReady,
                 ScanError::ScanningToFrequently => ErrorKind::Timeout,
+                ScanError::Unavailable => ErrorKind::AdapterUnavailable,
                 ScanError::Unknown(_) => ErrorKind::Other,
             },
             Some(Box::new(err)),
