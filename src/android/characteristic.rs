@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use bluedroid::characteristic::WriteType;
 
-use crate::{CharacteristicProperties, Descriptor, Result};
+use crate::{error::ErrorKind, CharacteristicProperties, Descriptor, Error, Result};
 
 use super::descriptor::DescriptorImpl;
 
@@ -42,11 +42,11 @@ impl CharacteristicImpl {
 
     /// Android does not give a way to get this
     pub fn max_write_len(&self) -> Result<usize> {
-        Ok(usize::MAX)
+        Err(Error::from(ErrorKind::NotSupported))
     }
 
     pub async fn max_write_len_async(&self) -> Result<usize> {
-        Ok(usize::MAX)
+        Err(Error::from(ErrorKind::NotSupported))
     }
 
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
