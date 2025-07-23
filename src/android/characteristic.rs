@@ -1,3 +1,6 @@
+use std::{hash::Hash, sync::Arc};
+
+use async_lock::Mutex;
 use futures_lite::{Stream, StreamExt};
 use uuid::Uuid;
 
@@ -7,12 +10,21 @@ use crate::{error::ErrorKind, CharacteristicProperties, Descriptor, Error, Resul
 
 use super::descriptor::DescriptorImpl;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CharacteristicImpl(pub(super) bluedroid::Characteristic);
+#[derive(Debug, Clone)]
+pub struct CharacteristicImpl {
+    characteristic: bluedroid::Characteristic,
+    cached_value: Arc<Mutex<Option<Vec<u8>>>>,
+}
 
 impl CharacteristicImpl {
+    pub(crate) fn new(characteristic: bluedroid::Characteristic) -> Self {
+        Self {
+            characteristic,
+            cached_value: Default::default(),
+        }
+    }
     pub fn uuid(&self) -> Uuid {
-        self.0.uuid()
+        self.characteristic.uuid()
     }
 
     pub async fn uuid_async(&self) -> Result<Uuid> {
@@ -20,24 +32,33 @@ impl CharacteristicImpl {
     }
 
     pub async fn properties(&self) -> Result<CharacteristicProperties> {
-        let properties = self.0.properties();
+        let properties = self.characteristic.properties();
         Ok(properties.into())
     }
 
     pub async fn value(&self) -> Result<Vec<u8>> {
+        let cache = self.cached_value.lock().await;
+        if let Some(val) = cache.as_ref() {
+            return Ok(val.clone());
+        }
+        drop(cache);
         self.read().await
     }
 
     pub async fn read(&self) -> Result<Vec<u8>> {
-        Ok(self.0.read().await?.into_vec())
+        // This does block concurrent reads, but they are blocked by android anyway.
+        let mut cache = self.cached_value.lock().await;
+        let value = self.characteristic.read().await?.into_vec();
+        *cache = Some(value.clone());
+        Ok(value)
     }
 
     pub async fn write(&self, value: &[u8]) -> Result<()> {
-        Ok(self.0.write(WriteType::Default, value).await?)
+        Ok(self.characteristic.write(WriteType::Default, value).await?)
     }
 
     pub async fn write_without_response(&self, value: &[u8]) -> Result<()> {
-        Ok(self.0.write(WriteType::NoResponse, value).await?)
+        Ok(self.characteristic.write(WriteType::NoResponse, value).await?)
     }
 
     /// Android does not give a way to get this
@@ -50,12 +71,12 @@ impl CharacteristicImpl {
     }
 
     pub async fn notify(&self) -> Result<impl Stream<Item = Result<Vec<u8>>> + Send + Unpin + '_> {
-        Ok(self.0.notify().await?.map(|data| Ok(data.into_vec())))
+        Ok(self.characteristic.notify().await?.map(|data| Ok(data.into_vec())))
     }
 
     pub async fn is_notifying(&self) -> Result<bool> {
         const CCC_DESCRIPTOR: Uuid = uuid::uuid!("00002902-0000-1000-8000-00805f9b34fb");
-        let descriptor = self.0.get_descriptor(CCC_DESCRIPTOR).unwrap();
+        let descriptor = self.characteristic.get_descriptor(CCC_DESCRIPTOR).unwrap();
         let ccc_descriptor_content = descriptor.read().await?;
         assert_eq!(ccc_descriptor_content.len(), 2);
         Ok((ccc_descriptor_content[0] & 0x01) != 0)
@@ -63,7 +84,7 @@ impl CharacteristicImpl {
 
     pub async fn discover_descriptors(&self) -> Result<Vec<Descriptor>> {
         Ok(self
-            .0
+            .characteristic
             .descriptors()
             .into_iter()
             .map(|descriptor| Descriptor(DescriptorImpl(descriptor)))
@@ -91,5 +112,19 @@ impl From<bluedroid::characteristic::CharacteristicProperties> for Characteristi
             reliable_write: false,
             writable_auxiliaries: false,
         }
+    }
+}
+
+impl PartialEq for CharacteristicImpl {
+    fn eq(&self, other: &Self) -> bool {
+        PartialEq::eq(&self.characteristic, &other.characteristic)
+    }
+}
+
+impl Eq for CharacteristicImpl {}
+
+impl Hash for CharacteristicImpl {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        Hash::hash(&self.characteristic, state)
     }
 }

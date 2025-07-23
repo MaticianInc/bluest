@@ -25,7 +25,7 @@ impl ServiceImpl {
             .0
             .characteristics()
             .into_iter()
-            .map(|characteristic| Characteristic(CharacteristicImpl(characteristic)))
+            .map(|characteristic| Characteristic(CharacteristicImpl::new(characteristic)))
             .collect())
     }
 
@@ -35,7 +35,7 @@ impl ServiceImpl {
             .characteristics()
             .into_iter()
             .filter_map(|characteristic| {
-                (characteristic.uuid() == uuid).then_some(Characteristic(CharacteristicImpl(characteristic)))
+                (characteristic.uuid() == uuid).then_some(Characteristic(CharacteristicImpl::new(characteristic)))
             })
             .collect())
     }

@@ -80,6 +80,9 @@ impl AdapterImpl {
     ///
     /// If `services` is not empty, returns advertisements including at least one GATT service with a UUID in
     /// `services`. Otherwise returns all advertisements.
+    ///
+    /// Android seems to support having multiple manufacturer data elements. Panic if there is more then one.
+    /// https://developer.android.com/reference/android/bluetooth/le/ScanRecord#getManufacturerSpecificData()
     pub async fn scan<'a>(
         &'a self,
         services: &'a [Uuid],
@@ -104,8 +107,6 @@ impl AdapterImpl {
                     adv_data: AdvertisementData {
                         local_name: service.local_name(),
                         manufacturer_data: {
-                            //Android seems to support having multiple manufacturer data elements. Panic if there is more then one.
-                            // https://developer.android.com/reference/android/bluetooth/le/ScanRecord#getManufacturerSpecificData()
                             let mut manufacturer_datas = service.manufacturer_specific_data().into_iter();
                             let manufacturer_data =
                                 manufacturer_datas.next().map(|(company_id, data)| ManufacturerData {
