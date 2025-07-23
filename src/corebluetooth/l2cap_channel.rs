@@ -9,13 +9,13 @@ use std::{
 use objc_foundation::INSData;
 use objc_id::{Id, Shared};
 use tokio::{
-    io::{AsyncRead, AsyncWrite, ReadBuf},
+    io::{AsyncRead, AsyncWrite, ReadBuf, ReadHalf, WriteHalf},
     net::UnixStream,
 };
 use tracing::warn;
 
 use super::types::{kCFStreamPropertySocketNativeHandle, CBL2CAPChannel, CFStream};
-use crate::{error::ErrorKind, Error};
+use crate::{error::ErrorKind, Error, L2CapChannelImpl};
 
 // This implementation is based upon the fact that that CBL2CAPChannel::outputStream -> an NS Output Stream; (https://developer.apple.com/documentation/foundation/outputstream)
 // NS Output stream is toll free bridged to CFWriteStream (https://developer.apple.com/documentation/corefoundation/cfwritestream)
@@ -167,5 +167,14 @@ impl From<ChannelCreationError> for Error {
             },
             message.to_owned(),
         )
+    }
+}
+
+pub type Reader = ReadHalf<Channel>;
+pub type Writer = WriteHalf<Channel>;
+
+impl L2CapChannelImpl for Channel {
+    fn split(self) -> (crate::L2CapReader, crate::L2CapWriter) {
+        tokio::io::split(self)
     }
 }

@@ -1,33 +1,26 @@
-use std::io::Result;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::sys;
 
 /// A Bluetooth LE L2CAP Connection-oriented Channel (CoC)
-#[derive(Debug)]
-pub struct L2capChannel {
-    pub(crate) channel: Pin<Box<sys::l2cap_channel::Channel>>,
+pub type L2CapChannel = sys::l2cap_channel::Channel;
+
+/// Trait for functions that all L2Cap Channels have
+pub trait L2CapChannelImpl: AsyncRead + AsyncWrite {
+    /// Split the channel into a reader and write half
+    fn split(self) -> (L2CapReader, L2CapWriter);
 }
 
-impl AsyncRead for L2capChannel {
-    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<Result<()>> {
-        self.channel.as_mut().poll_read(cx, buf)
-    }
-}
+/// Reader half of Bluetooth LE L2CAP Connection-oriented Channel (CoC)
+pub type L2CapReader = sys::l2cap_channel::Reader;
 
-impl AsyncWrite for L2capChannel {
-    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
-        self.channel.as_mut().poll_write(cx, buf)
-    }
+trait _L2CapReaderImpl: AsyncRead {}
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.channel.as_mut().poll_flush(cx)
-    }
+impl _L2CapReaderImpl for L2CapReader {}
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.channel.as_mut().poll_shutdown(cx)
-    }
-}
+/// Writer half of Bluetooth LE L2CAP Connection-oriented Channel (CoC)
+pub type L2CapWriter = sys::l2cap_channel::Writer;
+
+trait _L2CapWriterImpl: AsyncWrite {}
+
+impl _L2CapWriterImpl for L2CapWriter {}
