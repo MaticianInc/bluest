@@ -1,5 +1,5 @@
 use std::io::Result;
-use std::pin::Pin;
+use std::pin::{pin, Pin};
 use std::task::{Context, Poll};
 
 use bluer::l2cap::{SocketAddr, Stream};
@@ -7,12 +7,15 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tracing::trace;
 
 use crate::error::ErrorKind;
+use crate::L2CapChannelImpl;
+
+pub use bluer::l2cap::stream::{OwnedReadHalf as Reader, OwnedWriteHalf as Writer};
 
 const SECURE_CHANNEL_KEY_SIZE: u8 = 16;
 
 #[derive(Debug)]
 pub struct Channel {
-    stream: Pin<Box<bluer::l2cap::Stream>>,
+    stream: bluer::l2cap::Stream,
 }
 
 enum ChannelCreationError {
@@ -46,29 +49,33 @@ impl Channel {
             stream.as_ref().flow_control(),
         );
 
-        Ok(Self {
-            stream: Box::pin(stream),
-        })
+        Ok(Self { stream })
+    }
+}
+
+impl L2CapChannelImpl for Channel {
+    fn split(self) -> (crate::L2CapReader, crate::L2CapWriter) {
+        self.stream.into_split()
     }
 }
 
 impl AsyncRead for Channel {
     fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
-        self.stream.as_mut().poll_read(cx, buf)
+        pin!(&mut self.stream).poll_read(cx, buf)
     }
 }
 
 impl AsyncWrite for Channel {
     fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize>> {
-        self.stream.as_mut().poll_write(cx, buf)
+        pin!(&mut self.stream).poll_write(cx, buf)
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.stream.as_mut().poll_flush(cx)
+        pin!(&mut self.stream).poll_flush(cx)
     }
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
-        self.stream.as_mut().poll_shutdown(cx)
+        pin!(&mut self.stream).poll_shutdown(cx)
     }
 }
 
